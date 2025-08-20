@@ -6,6 +6,13 @@ import { supabase } from './supabaseClient';
 type Chat = { id: string; name: string | null; is_group: boolean };
 type Msg = { id?: string; chat_id: string; sender_id: string; content: string; inserted_at?: string };
 
+// --- Environment Variables ---
+// Using process.env as a fallback for environments where import.meta.env might not be configured.
+// Ensure your build tool (like Vite) is set up to handle these.
+const VITE_SERVER_API_URL = import.meta.env?.VITE_SERVER_API_URL || '';
+const VITE_SERVER_WS_URL = import.meta.env?.VITE_SERVER_WS_URL || 'ws://localhost:3001';
+
+
 // --- Main App Component (Authentication Gate) ---
 export default function App() {
   const [session, setSession] = useState<any>(null);
@@ -48,7 +55,7 @@ function ChatInterface({ session }: { session: any }) {
   useEffect(() => {
     const fetchChats = async () => {
       try {
-        const response = await fetch('/api/chats', {
+        const response = await fetch(`${VITE_SERVER_API_URL}/api/chats`, {
           headers: { 'Authorization': `Bearer ${session.access_token}` }
         });
         if (!response.ok) throw new Error('Failed to fetch chats');
@@ -64,8 +71,7 @@ function ChatInterface({ session }: { session: any }) {
   // Memoize the WebSocket URL to prevent re-computation on every render
   const wsUrl = useMemo(() => {
     const token = session.access_token;
-    const base = import.meta.env.VITE_SERVER_WS_URL!; // e.g., 'ws://localhost:3001'
-    return `${base}?token=${encodeURIComponent(token)}`;
+    return `${VITE_SERVER_WS_URL}?token=${encodeURIComponent(token)}`;
   }, [session]);
 
   // Establish and manage the WebSocket connection
@@ -77,9 +83,6 @@ function ChatInterface({ session }: { session: any }) {
     ws.onmessage = (ev) => {
       const msg = JSON.parse(ev.data);
       
-      // *** BUG FIX IMPLEMENTED HERE ***
-      // Only add the incoming message to the history if it's from another user.
-      // The sender's own messages are added optimistically in the `send` function.
       if (msg.type === 'new_message' && msg.sender_id !== session.user.id) {
         setHistory((h) => [...h, msg]);
       }
@@ -97,7 +100,7 @@ function ChatInterface({ session }: { session: any }) {
     setHistory([]); // Clear history from the previous chat
 
     try {
-      const response = await fetch(`/api/chats/${chat.id}/messages`, {
+      const response = await fetch(`${VITE_SERVER_API_URL}/api/chats/${chat.id}/messages`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       });
       if (!response.ok) throw new Error('Failed to fetch history');
@@ -123,11 +126,11 @@ function ChatInterface({ session }: { session: any }) {
       chat_id: currentChat.id,
       sender_id: session.user.id,
       content: content,
-      inserted_at: new Date().toISOString() // Temporary timestamp for the key
+      inserted_at: new Date().toISOString()
     }]);
 
     // Send the message to the backend API to be persisted and broadcast
-    await fetch(`/api/chats/${currentChat.id}/messages`, {
+    await fetch(`${VITE_SERVER_API_URL}/api/chats/${currentChat.id}/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -171,7 +174,7 @@ function ChatInterface({ session }: { session: any }) {
         </h3>
         <div style={styles.messageContainer}>
           {history.map((m, i) => (
-            <div key={i} style={m.sender_id === session.user.id ? styles.myMessage : styles.theirMessage}>
+            <div key={m.id || i} style={m.sender_id === session.user.id ? styles.myMessage : styles.theirMessage}>
               <div style={{ ...styles.messageBubble, backgroundColor: m.sender_id === session.user.id ? '#007bff' : '#3a3f48' }}>
                 <strong>{m.sender_id.slice(0, 6)}:</strong> {m.content}
               </div>
