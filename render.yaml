@@ -1,0 +1,35 @@
+# render.yaml
+# This file defines the two services for our chat application.
+
+services:
+  # 1. The Backend Web Service (Node.js/Express)
+  - type: web
+    name: chat-app-backend
+    runtime: node
+    rootDir: backend
+    plan: free # You can change this to a paid plan if you need more resources
+    buildCommand: "npm install"
+    startCommand: "node index.js"
+    envVars:
+      - key: SUPABASE_URL
+        fromSecret: SUPABASE_URL # These will be synced from your Render secrets
+      - key: SUPABASE_ANON_KEY
+        fromSecret: SUPABASE_ANON_KEY
+      - key: SUPABASE_JWT_SECRET
+        fromSecret: SUPABASE_JWT_SECRET
+      - key: SUPABASE_SERVICE_KEY
+        fromSecret: SUPABASE_SERVICE_KEY
+
+  # 2. The Frontend Static Site (React)
+  - type: static
+    name: chat-app-frontend
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    publishDir: dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        fromSecret: VITE_SUPABASE_URL
+      - key: VITE_SUPABASE_ANON_KEY
+        fromSecret: VITE_SUPABASE_ANON_KEY
+      - key: VITE_SERVER_WS_URL
+        value: wss://${chat-app-backend.onrender.com} # Automatically uses the backend's live URL
