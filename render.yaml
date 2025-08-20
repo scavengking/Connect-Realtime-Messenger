@@ -7,12 +7,12 @@ services:
     name: chat-app-backend
     runtime: node
     rootDir: backend
-    plan: free # You can change this to a paid plan if you need more resources
+    plan: free
     buildCommand: "npm install"
     startCommand: "node index.js"
     envVars:
       - key: SUPABASE_URL
-        fromSecret: SUPABASE_URL # These will be synced from your Render secrets
+        fromSecret: SUPABASE_URL
       - key: SUPABASE_ANON_KEY
         fromSecret: SUPABASE_ANON_KEY
       - key: SUPABASE_JWT_SECRET
@@ -21,7 +21,7 @@ services:
         fromSecret: SUPABASE_SERVICE_KEY
 
   # 2. The Frontend Static Site (React)
-  - type: static
+  - type: static site # <-- THIS IS THE FIX
     name: chat-app-frontend
     rootDir: frontend
     buildCommand: "npm install && npm run build"
@@ -32,4 +32,4 @@ services:
       - key: VITE_SUPABASE_ANON_KEY
         fromSecret: VITE_SUPABASE_ANON_KEY
       - key: VITE_SERVER_WS_URL
-        value: wss://${chat-app-backend.onrender.com} # Automatically uses the backend's live URL
+        value: wss://${chat-app-backend.onrender.com}
